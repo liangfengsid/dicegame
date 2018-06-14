@@ -25,7 +25,7 @@ class mcts_game:
 # Opt_game always bet a value just cover the lost plus the goal.
 class opt_game:
 	def play(self, stat):
-		value = min(stat.balance(), 100 + stat.goal() - stat.balance)
+		value = min(stat.balance(), 100 + stat.goal() - stat.balance())
 		return state.SMALL, value
 
 
@@ -72,8 +72,8 @@ if __name__ == '__main__':
 					print('====Thread ', self.__id, ': game ends with state: ', stat.value(),
 							", average balance: ", 1.0 * balances / (1 + i))
 			with self.__lock:
-				self.__sum_balance += balances
-				self.__sum_step += steps
+				self.__sum_balance.value += balances
+				self.__sum_step.value += steps
 			print('Thread ', self.__id, ': average balance ', 1.0 * balances / self.__num_game,
 					', average step: ', 1.0 * steps / self.__num_game)
 
