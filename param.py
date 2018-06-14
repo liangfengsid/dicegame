@@ -1,0 +1,15 @@
+# mcts
+C_PUCT = 5
+TEMPRETURE = 0.67
+NUM_SIMULATION = 100
+# NUM_SIMULATION = 5
+NUM_PLAY = 500
+CHECKPOINT_INTERVAL = 100
+QUIT_THRESHOLD = 100 # after which the play ends
+
+# model
+C = 0.0001
+BATCH_SIZE = 8
+
+# dice game
+ACTION_INTERVAL = 1
