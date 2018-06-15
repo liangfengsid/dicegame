@@ -1,9 +1,11 @@
 import sys
+import time
 import threading
 from multiprocessing import Value
 
 import state
 import util
+import param
 from mcts import MCTS
 from state import DEFAULT_TRANSFORM
 from state import State
@@ -15,12 +17,21 @@ class mcts_game:
 	def __init__(self, path=''):
 		self.mcts = MCTS(path)
 
-	def learn(self):
-		self.mcts.learn()
+	def learn(self, checkpoint_path=""):
+		start = time.time()
+		for n in range(0, param.NUM_PLAY):
+			root = state.State(0, 100, (n % 100) + 1)
+			self.mcts.play_one_game(root)
+			end = time.time()
+			print(n, "======:", end - start)
+			start = end
+			if (n + 1) % param.CHECKPOINT_INTERVAL == 0 and checkpoint_path != "":
+				self.mcts.save(checkpoint_path)
 
 	def play(self, stat):
-		choice, value, _, _ = self.mcts.play_one_move(stat)
+		(choice, value), _, _ = self.mcts.play_one_move(stat)
 		return choice, value
+
 
 # Opt_game always bet a value just cover the lost plus the goal.
 class opt_game:
@@ -29,19 +40,7 @@ class opt_game:
 		return state.SMALL, value
 
 
-if __name__ == '__main__':
-	if len(sys.argv) > 1 and sys.argv[1] == 'opt':
-		game_type = OPT_GAME
-	else:
-		game_type = MCTS_GAME
-	num_thread = 4
-	num_game = 1000
-
-	lock = threading.Lock()
-	sum_balance = Value('i', 0)
-	sum_step = Value('i', 0)
-
-	class game_thread(threading.Thread):
+class game_thread(threading.Thread):
 		# type is either MCTS_TYPE or OPT_TYPE
 		def __init__(self, id, num_game, type, balance_ref, step_ref, lock):
 			threading.Thread.__init__(self)
@@ -68,8 +67,8 @@ if __name__ == '__main__':
 				#print("==Game ends with state: ", stat.value())
 				balances += stat.balance()
 				steps += stat.step()
-				if (i + 1) % 50 == 0:
-					print('====Thread ', self.__id, ': game ends with state: ', stat.value(),
+				if (i + 1) % 1 == 0:
+					print(i, '====Thread ', self.__id, ': game ends with state: ', stat.value(),
 							", average balance: ", 1.0 * balances / (1 + i))
 			with self.__lock:
 				self.__sum_balance.value += balances
@@ -77,14 +76,31 @@ if __name__ == '__main__':
 			print('Thread ', self.__id, ': average balance ', 1.0 * balances / self.__num_game,
 					', average step: ', 1.0 * steps / self.__num_game)
 
-	threads = [game_thread(i, num_game, game_type, sum_balance, sum_step, lock) for i in range(0, num_thread)]
-	for t in threads:
-		t.start()
-	for t in threads:
-		t.join()
 
-	print('Average balance ', 1.0 * sum_balance.value / num_game / num_thread,
-			', average step: ', 1.0 * sum_step.value / num_game / num_thread)
+if __name__ == '__main__':
+	if len(sys.argv) == 3 and sys.argv[1] == 'learn':
+		path = sys.argv[2]
+		g = mcts_game(path)
+		g.learn(checkpoint_path=path)
+	elif (len(sys.argv) == 2 or len(sys.argv) == 3) and sys.argv[1] == 'play':
+		if len(sys.argv) == 3 and sys.argv[2] == 'opt':
+			game_type = OPT_GAME
+		else:
+			game_type = MCTS_GAME
+		num_thread = param.NUM_THREAD
+		num_game = param.GAME_PER_THREAD
 
+		lock = threading.Lock()
+		sum_balance = Value('i', 0)
+		sum_step = Value('i', 0)
 
+		threads = [game_thread(i, num_game, game_type, sum_balance, sum_step, lock) for i in range(0, num_thread)]
+		for t in threads:
+			t.start()
+		for t in threads:
+			t.join()
 
+		print('Average balance ', 1.0 * sum_balance.value / num_game / num_thread,
+				', average step: ', 1.0 * sum_step.value / num_game / num_thread)
+	else:
+		print('Wrong argument. The input command should be in the format of "game.py [learn|play [opt|mcts]]"')
