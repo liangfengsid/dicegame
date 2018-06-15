@@ -15,7 +15,7 @@ def action_from_choice_value(choice, value):
 
 # @ret (choice, value), where choice is default to SMALL without distinguishing it from BIG,
 # or is to TRIPLE_ONE without distinguishing it from other TRIPLE_***
-def action_to_choice_value(action):
+def action_to_state_choice(action):
 	if not 1 <= action <= 200:
 		print(action)
 	assert 1 <= action <= 200
@@ -55,3 +55,8 @@ def random_max_index(p):
 # Check whether the game should be ended.
 def is_game_ended(stat):
 	return stat.balance() == 0 or stat.balance() - 100 >= stat.goal() or stat.step() >= param.QUIT_THRESHOLD
+
+
+# Transform a state to its reward.
+def state_to_reward(stat):
+	return (stat.balance() - 100) / 100.0

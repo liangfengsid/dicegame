@@ -1,6 +1,5 @@
 import math
 import os.path
-import time
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -92,14 +91,14 @@ class MCTS:
 				max_p = pi
 				max_a = a
 			p_sum += pi
-		p = [0.0] * 200
+		p = [0.0] * state.NUM_ACTIONS
 		for a in actions:
 			p[util.action_to_p_index(a)] = math.pow(self.N[(sv, a)], 1.0 / param.TEMPRETURE) / p_sum
 
-		choice, value = util.action_to_choice_value(max_a)
-		new_stat = stat.copy_transform(state.DEFAULT_TRANSFORM, choice, value)
+		choice = util.action_to_state_choice(max_a)
+		new_stat = stat.copy_transform(state.DEFAULT_TRANSFORM, choice)
 
-		return choice, value, p, new_stat
+		return choice, p, new_stat
 
 	# Discard the statistics of the root of MC tree
 	# Assuming keys (sv, a) for all available actions a exist in N, W, Q, P
@@ -140,8 +139,8 @@ class MCTS:
 				stat_actions.append((stat, act))
 
 				# Transform the state
-				choice, value = util.action_to_choice_value(act)
-				stat = stat.copy_transform(state.DEFAULT_TRANSFORM, choice, value)
+				choice = util.action_to_state_choice(act)
+				stat = stat.copy_transform(state.DEFAULT_TRANSFORM, choice)
 
 			# expand and backup
 			if is_leaf:
@@ -154,9 +153,9 @@ class MCTS:
 		# End the simulation for loop
 
 		# Play
-		choice, value, p, new_root = self._play(root)
+		state_choice, p, new_root = self._play(root)
 		self._discard(root)
-		return choice, value, p, new_root
+		return state_choice, p, new_root
 
 	# Play a game by MCTS. The play statistics is used to train the model.
 	def play_one_game(self, root):
@@ -167,7 +166,7 @@ class MCTS:
 		while not util.is_game_ended(root):
 			# Play one move
 			root_list.append(root.value())
-			_, _, p, root = self.play_one_move(root)
+			_, p, root = self.play_one_move(root)
 			p_list.append(np.asarray(p))
 		# End the play while loop
 
@@ -175,25 +174,11 @@ class MCTS:
 		root_array = np.asarray(root_list)
 		p_array = np.asarray(p_list)
 		# v is normalized to the precision of 0.01.
-		v_array = np.asarray([[(root.balance() - 100) / 100.0]] * len(root_list))
+		v_array = np.asarray([[util.state_to_reward(root)]] * len(root_list))
 		for i in range(0, (len(root_array) - 1) / param.BATCH_SIZE + 1):
 			self.model.train(root_array[i * param.BATCH_SIZE:(i + 1) * param.BATCH_SIZE],
 					p_array[i * param.BATCH_SIZE:(i + 1) * param.BATCH_SIZE],
 					v_array[i * param.BATCH_SIZE:(i + 1) * param.BATCH_SIZE])
-
-	def learn(self, checkpoint_path=""):
-		start = time.time()
-		for n in range(0, param.NUM_PLAY):
-			root = state.State(0, 100, (n % 100) + 1)
-			self.play_one_game(root, False)
-			end = time.time()
-			print(n, "======:", end - start)
-			start = end
-			if (n + 1) % param.CHECKPOINT_INTERVAL == 0 and checkpoint_path != "":
-				self.save(checkpoint_path)
-
-	def max_action(self):
-		return
 
 	def save(self, path):
 		model_path = path + '.model'
@@ -211,7 +196,6 @@ class MCTS:
 
 if __name__ == "__main__":
 	tree = MCTS(path="model/dice")
-	tree.learn(checkpoint_path="model/dice")
 	p, v = tree.model.inference([[0, 100, 1]])
 	print(p, v)
 
