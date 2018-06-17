@@ -21,8 +21,8 @@ class SoftmaxModel:
 			# cross_entropy = tf.reduce_mean(-tf.reduce_sum(self.y_ * tf.log(self.y)), axis=[1])
 			# TODO weights of differences between p and v
 			self.min_bound = tf.ones([tf.shape(z)[0], 200], dtype=tf.float32) / 10000
-			self.cross_entropy = -tf.reduce_mean(tf.reduce_sum(tf.maximum(self.p_, self.min_bound) * tf.log(tf.maximum(self.p, self.min_bound)), reduction_indices=[1])) + \
-					tf.reduce_mean(tf.square(self.v - self.v_)) + param.C * \
+			self.cross_entropy = -tf.reduce_sum(tf.reduce_sum(tf.maximum(self.p_, self.min_bound) * tf.log(tf.maximum(self.p, self.min_bound)), reduction_indices=[1])) + \
+					tf.reduce_sum(tf.square(self.v - self.v_)) + param.C * \
 					(tf.nn.l2_loss(self.w) + tf.nn.l2_loss(self.b))
 			self.optimizer = tf.train.GradientDescentOptimizer(rate).minimize(self.cross_entropy)
 

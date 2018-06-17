@@ -42,9 +42,10 @@ class opt_game:
 
 class game_thread(threading.Thread):
 		# type is either MCTS_TYPE or OPT_TYPE
-		def __init__(self, id, num_game, type, balance_ref, step_ref, lock):
+		def __init__(self, id, model_path, num_game, type, balance_ref, step_ref, lock):
 			threading.Thread.__init__(self)
 			self.__id = id
+			self.__model_path = model_path
 			self.__num_game = num_game
 			self.__type = type
 			self.__sum_balance = balance_ref
@@ -57,7 +58,7 @@ class game_thread(threading.Thread):
 			for i in range(0, self.__num_game):
 				# A game
 				if self.__type == MCTS_GAME:
-					g = mcts_game(path='model/dice')
+					g = mcts_game(path=self.__model_path)
 				else:
 					g = opt_game()
 				stat = State(0, 100, 1)
@@ -82,10 +83,12 @@ if __name__ == '__main__':
 		path = sys.argv[2]
 		g = mcts_game(path)
 		g.learn(checkpoint_path=path)
-	elif (len(sys.argv) == 2 or len(sys.argv) == 3) and sys.argv[1] == 'play':
+	elif (len(sys.argv) == 3 or len(sys.argv) == 4) and sys.argv[1] == 'play':
 		if len(sys.argv) == 3 and sys.argv[2] == 'opt':
+			path = ''
 			game_type = OPT_GAME
 		else:
+			path = sys.argv[3]
 			game_type = MCTS_GAME
 		num_thread = param.NUM_THREAD
 		num_game = param.GAME_PER_THREAD
@@ -94,7 +97,7 @@ if __name__ == '__main__':
 		sum_balance = Value('i', 0)
 		sum_step = Value('i', 0)
 
-		threads = [game_thread(i, num_game, game_type, sum_balance, sum_step, lock) for i in range(0, num_thread)]
+		threads = [game_thread(i, path, num_game, game_type, sum_balance, sum_step, lock) for i in range(0, num_thread)]
 		for t in threads:
 			t.start()
 		for t in threads:
