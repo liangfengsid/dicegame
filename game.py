@@ -13,7 +13,7 @@ from state import State
 MCTS_GAME = 0
 OPT_GAME = 1
 
-class mcts_game:
+class MCTSGame:
 	def __init__(self, path=''):
 		self.mcts = MCTS(path)
 
@@ -34,13 +34,13 @@ class mcts_game:
 
 
 # Opt_game always bet a value just cover the lost plus the goal.
-class opt_game:
+class OptGame:
 	def play(self, stat):
 		value = min(stat.balance(), 100 + stat.goal() - stat.balance())
 		return state.SMALL, value
 
 
-class game_thread(threading.Thread):
+class GameThread(threading.Thread):
 		# type is either MCTS_TYPE or OPT_TYPE
 		def __init__(self, id, model_path, num_game, type, balance_ref, step_ref, lock):
 			threading.Thread.__init__(self)
@@ -58,9 +58,9 @@ class game_thread(threading.Thread):
 			for i in range(0, self.__num_game):
 				# A game
 				if self.__type == MCTS_GAME:
-					g = mcts_game(path=self.__model_path)
+					g = MCTSGame(path=self.__model_path)
 				else:
-					g = opt_game()
+					g = OptGame()
 				stat = State(0, 100, 1)
 				while not util.is_game_ended(stat):
 					choice, value = g.play(stat)
@@ -81,7 +81,7 @@ class game_thread(threading.Thread):
 if __name__ == '__main__':
 	if len(sys.argv) == 3 and sys.argv[1] == 'learn':
 		path = sys.argv[2]
-		g = mcts_game(path)
+		g = MCTSGame(path)
 		g.learn(checkpoint_path=path)
 	elif (len(sys.argv) == 3 or len(sys.argv) == 4) and sys.argv[1] == 'play':
 		if len(sys.argv) == 3 and sys.argv[2] == 'opt':
@@ -97,7 +97,7 @@ if __name__ == '__main__':
 		sum_balance = Value('i', 0)
 		sum_step = Value('i', 0)
 
-		threads = [game_thread(i, path, num_game, game_type, sum_balance, sum_step, lock) for i in range(0, num_thread)]
+		threads = [GameThread(i, path, num_game, game_type, sum_balance, sum_step, lock) for i in range(0, num_thread)]
 		for t in threads:
 			t.start()
 		for t in threads:

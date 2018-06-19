@@ -10,6 +10,7 @@ QUIT_THRESHOLD = 100 # after which the play ends
 # model
 C = 0.0001
 BATCH_SIZE = 8
+SUMMARY_PATH = 'model/summary'
 
 # dice game
 ACTION_INTERVAL = 1

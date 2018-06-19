@@ -1,7 +1,5 @@
 import math
 import os.path
-
-import matplotlib.pyplot as plt
 import numpy as np
 
 import model
@@ -212,4 +210,3 @@ if __name__ == "__main__":
 	new_model.load("model/dice.model")
 	new_p, new_v = new_model.inference([[0, 100, 1]])
 	print(new_p, new_v)
-	plt.plot(p[0])
