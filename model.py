@@ -26,8 +26,7 @@ class SoftmaxModel:
 			self.optimizer = tf.train.GradientDescentOptimizer(rate).minimize(self.cross_entropy)
 			tf.summary.scalar('cross_entropy', self.cross_entropy)
 			self.merged = tf.summary.merge_all()
-
-		self.train_index = 0
+			self.train_step = tf.Variable(1)
 		self.sess = tf.Session(graph=graph)
 		self.writer = tf.summary.FileWriter(summary_path)
 
@@ -54,8 +53,10 @@ class SoftmaxModel:
 	def train(self, x, p, v):
 		# type: ([None, 3], [None, 200], [None, 1]) -> object
 		summary, _ = self.sess.run([self.merged, self.optimizer], feed_dict={self.x: x, self.p_: p, self.v_: v})
-		self.writer.add_summary(summary, self.train_index)
-		self.train_index += 1
+		step = self.sess.run(self.train_step)
+		self.writer.add_summary(summary, step)
+		self.train_step = self.train_step.assign_add(1)
+		self.writer.flush()
 
 	def inference(self, x):
 		return self.sess.run([self.p, self.v], feed_dict={self.x: x})
