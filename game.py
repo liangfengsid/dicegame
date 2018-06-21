@@ -1,3 +1,4 @@
+import random
 import sys
 import time
 import threading
@@ -12,6 +13,8 @@ from state import State
 
 MCTS_GAME = 0
 OPT_GAME = 1
+RAND_GAME = 2
+NORMAL_GAME = 3
 
 class MCTSGame:
 	def __init__(self, path=''):
@@ -33,11 +36,24 @@ class MCTSGame:
 		return choice, value
 
 
-# Opt_game always bet a value just cover the lost plus the goal.
+# OptGame always bet a value just cover the lost plus the goal.
 class OptGame:
 	def play(self, stat):
 		value = min(stat.balance(), 100 + stat.goal() - stat.balance())
 		return state.SMALL, value
+
+
+# RandGame always bet a random value within balance.
+class RandGame:
+	def play(self, stat):
+		random.seed(time.time())
+		value = random.randint(1, stat.balance())
+		return state.SMALL, value
+
+
+class NormalGame:
+	def play(self, stat):
+		return state.SMALL, 1
 
 
 class GameThread(threading.Thread):
@@ -59,9 +75,13 @@ class GameThread(threading.Thread):
 				# A game
 				if self.__type == MCTS_GAME:
 					g = MCTSGame(path=self.__model_path)
+				elif self.__type == NORMAL_GAME:
+					g = NormalGame()
+				elif self.__type == RAND_GAME:
+					g = RandGame()
 				else:
 					g = OptGame()
-				stat = State(0, 100, 1)
+				stat = State(0, 100, 10)
 				while not util.is_game_ended(stat):
 					choice, value = g.play(stat)
 					stat.transform(DEFAULT_TRANSFORM, choice, value)
@@ -87,6 +107,12 @@ if __name__ == '__main__':
 		if len(sys.argv) == 3 and sys.argv[2] == 'opt':
 			path = ''
 			game_type = OPT_GAME
+		elif len(sys.argv) == 3 and sys.argv[2] == 'random':
+			path = ''
+			game_type = RAND_GAME
+		elif len(sys.argv) == 3 and sys.argv[2] == 'normal':
+			path = ''
+			game_type = NORMAL_GAME
 		else:
 			path = sys.argv[3]
 			game_type = MCTS_GAME
