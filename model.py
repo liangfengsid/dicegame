@@ -20,16 +20,20 @@ class SoftmaxModel:
 			self.v_ = tf.placeholder(tf.float32, shape=[None, 1])
 			# TODO weights of differences between p and v
 			min_bound = tf.ones([tf.shape(z)[0], 200], dtype=tf.float32) / 10000
-			self.cross_entropy = -tf.reduce_sum(tf.reduce_sum(tf.maximum(self.p_, min_bound) * tf.log(tf.maximum(self.p, min_bound)), reduction_indices=[1])) + \
-					tf.reduce_sum(tf.square(self.v - self.v_)) + param.C * \
+			p_cross_entropy = -tf.reduce_sum(tf.reduce_sum(tf.maximum(self.p_, min_bound) * tf.log(tf.maximum(self.p, min_bound)), reduction_indices=[1]))
+			v_cross_entropy = tf.reduce_sum(tf.square(self.v - self.v_))
+			self.cross_entropy = -param.C1 * tf.reduce_sum(tf.reduce_sum(tf.maximum(self.p_, min_bound) * tf.log(tf.maximum(self.p, min_bound)), reduction_indices=[1])) + \
+					tf.reduce_sum(tf.square(self.v - self.v_)) + param.C2 * \
 					(tf.nn.l2_loss(self.w) + tf.nn.l2_loss(self.b))
 			self.optimizer = tf.train.GradientDescentOptimizer(rate).minimize(self.cross_entropy)
 			tf.summary.scalar('cross_entropy', self.cross_entropy)
+			tf.summary.scalar('p_cross_entropy', p_cross_entropy)
+			tf.summary.scalar('v_cross_entropy', v_cross_entropy)
 			self.merged = tf.summary.merge_all()
-			self.train_step = tf.Variable(1)
+			self.train_step = tf.Variable(0)
+			self.inc_train_step = tf.assign_add(self.train_step, 1)
 		self.sess = tf.Session(graph=graph)
 		self.writer = tf.summary.FileWriter(summary_path)
-
 
 	def init_variables(self):
 		with self.sess.as_default():
@@ -53,9 +57,8 @@ class SoftmaxModel:
 	def train(self, x, p, v):
 		# type: ([None, 3], [None, 200], [None, 1]) -> object
 		summary, _ = self.sess.run([self.merged, self.optimizer], feed_dict={self.x: x, self.p_: p, self.v_: v})
-		step = self.sess.run(self.train_step)
+		step, _ = self.sess.run([self.train_step, self.inc_train_step])
 		self.writer.add_summary(summary, step)
-		self.train_step = self.train_step.assign_add(1)
 		self.writer.flush()
 
 	def inference(self, x):
